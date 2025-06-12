@@ -42,7 +42,8 @@ USE_LLVM = os.environ.get("USE_LLVM", "False").lower() == "true"
 USE_ROCM = os.environ.get("USE_ROCM", "False").lower() == "true"
 # Build with Debug mode
 DEBUG_MODE = os.environ.get("DEBUG_MODE", "False").lower() == "true"
-
+# Use all of cores to build by default
+MAX_JOBS = os.environ.get("MAX_JOBS", str(max(1, multiprocessing.cpu_count())))
 
 def load_module_from_path(module_name, path):
     spec = importlib.util.spec_from_file_location(module_name, path)
@@ -291,8 +292,7 @@ def build_csrc(llvm_config_path):
     # Run CMake and make
     try:
         subprocess.check_call(["cmake", ".."])
-        num_jobs = max(1, int(multiprocessing.cpu_count() * 0.75))
-        subprocess.check_call(["make", f"-j{num_jobs}"])
+        subprocess.check_call(["make", f"-j{MAX_JOBS}"])
     except subprocess.CalledProcessError as error:
         raise RuntimeError("Failed to build TileLang C Source") from error
 
@@ -667,7 +667,7 @@ class CMakeBuild(build_ext):
         subprocess.check_call(["cmake", ext.sourcedir] + cmake_args, cwd=build_temp)
 
         # Build the project in "Release" mode with all available CPU cores ("-j").
-        subprocess.check_call(["cmake", "--build", ".", "--config", "Release", "-j"],
+        subprocess.check_call(["cmake", "--build", ".", "--config", "Release", f"-j{MAX_JOBS}"],
                               cwd=build_temp)
 
 
